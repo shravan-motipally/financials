@@ -13,4 +13,10 @@ export const getAggregateDataUrl = (ticker: string, multiplier: number, timespan
   `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${formattedDate(from)}/${formattedDate(to)}?adjusted=true&sort=asc&limit=5000`
 
 export const getTickerDataUrl = (search: string) =>
-  `https://api.polygon.io/v3/reference/tickers?search=${search}&active=true`
+  `https://api.polygon.io/v3/reference/tickers?search=${search}&active=true`;
+
+export const getAllTickersUrl = () =>
+  `https://api.polygon.io/v3/reference/tickers?active=true`;
+
+export const getFinancialDataUrl = (ticker: string) =>
+  `https://api.polygon.io/vX/reference/financials?ticker=${ticker}&period_of_report_date.gt=2022-12-29&timeframe=annual`;

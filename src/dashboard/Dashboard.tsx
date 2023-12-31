@@ -1,8 +1,9 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from 'react';
 import * as appl from '../data/5min-aggregate-appl.json';
 import * as allTickers from '../data/tickers.json';
+import * as fin from '../data/financialData.json';
 import {LineChart} from '@mui/x-charts/LineChart';
-import {Grid, MenuItem} from "@mui/material";
+import {Grid, InputLabel, MenuItem, NativeSelect, Paper, Typography} from "@mui/material";
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -15,7 +16,11 @@ import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
-import { useDebouncedCallback } from 'use-debounce';
+import {useDebouncedCallback} from 'use-debounce';
+import {getAggregateData, getAllTickerData, getFinancials, getTickerData} from "../api/polygon-io-api";
+import Title from "./Title";
+import Subtitle from "./Subtitle";
+import { startCase, snakeCase } from 'lodash';
 
 export interface Ticker {
   ticker: string,
@@ -35,6 +40,9 @@ const Dashboard = () => {
   const [options, setOptions] = React.useState<readonly Ticker[]>([]);
   const loading = open && options.length === 0;
 
+  const [tickerFinData, setTickerFinData] = useState<any[]>([]);
+  const [category, setCategory] = useState<string>("Balance Sheet");
+
   const handleChange = (event: SelectChangeEvent) => {
     setTicker(event.target.value as string);
   };
@@ -50,12 +58,17 @@ const Dashboard = () => {
         multiplier = 5;
       }
 
-      // const aggregateData = await getAggregateData(ticker, multiplier, timespan, from, to);
-      // const tickers = await getTickerData(ticker);
-      const aggregateData = appl;
-      const tickers = allTickers;
+      const aggregateData = await getAggregateData(ticker, multiplier, timespan, from, to);
+      const tickers = await getTickerData(ticker);
+      const finData = await getFinancials(ticker);
+      const options = await getAllTickerData();
+      // const aggregateData = appl;
+      // const tickers = allTickers;
+      // const finData = fin;
       setData(aggregateData.results);
       setTickerData(tickers.results);
+      setOptions(options.results);
+      setTickerFinData(finData.results);
     })();
   }, [ticker, timespan, from, to]);
 
@@ -115,17 +128,54 @@ const Dashboard = () => {
     3000
   );
 
+  const financialDataCategories = useMemo(() => {
+    const cats: Set<string> = new Set();
+    tickerFinData.forEach(datum => {
+      const fin = datum["financials"];
+      Object.keys(fin).forEach(key => cats.add(startCase(key)));
+    });
+    return cats;
+  }, [tickerFinData]);
+
+  const categories = useMemo(() => {
+    const cats: string[] = [];
+    financialDataCategories.forEach(cat => cats.push(cat));
+    return cats;
+  }, [financialDataCategories])
+
+  const financialData = useMemo(() => {
+    return tickerFinData.map(datum => {
+      const fin = datum["financials"];
+      if (category !== '') {
+        const specifics = Object.keys(fin[snakeCase(category)]);
+        return (
+          <div style={{ fontSize: '2vmin' }}>
+            {specifics.map(datum => (
+            <Typography component="p" variant="body1" sx={{ textAlign: 'left', fontSize: '2vmin' }}>
+              {startCase(datum)}: {fin[snakeCase(category)][datum]["value"]} {fin[snakeCase(category)][datum]["unit"]}
+            </Typography>))}
+          </div>)
+      } else {
+        return <div/>;
+      }
+    })
+  }, [tickerFinData, category, categories]);
+
+  const handleChangeCategory = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
+    setCategory(e.target.value);
+  }, [categories]);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{flexGrow: 1}}>
-        <AppBar position="static">
+        <AppBar position="static" color={"info"}>
           <Toolbar>
             <Grid container spacing={2}>
-              <Grid item >
+              <Grid item>
                 <FormControl>
                   <Autocomplete
                     id="asynchronous-demo"
-                    sx={{ width: 300 }}
+                    sx={{width: 300}}
                     open={open}
                     onOpen={() => {
                       setOpen(true);
@@ -146,7 +196,7 @@ const Dashboard = () => {
                           ...params.InputProps,
                           endAdornment: (
                             <React.Fragment>
-                              {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {loading ? <CircularProgress color="inherit" size={20}/> : null}
                               {params.InputProps.endAdornment}
                             </React.Fragment>
                           ),
@@ -183,24 +233,55 @@ const Dashboard = () => {
           </Toolbar>
         </AppBar>
       </Box>
-      <div style={{height: "90vh"}}>
-        <LineChart
-          xAxis={[{data: xVals, tickInterval: (time) => time.getHours() === 0, scaleType: 'time', }]}
-          series={[
-            {
-              label: 'Close price',
-              data: closePriceVals,
-            },
-            {
-              label: 'Open price',
-              data: openPriceVals,
-            },
-            {
-              label: 'Volume weighted price',
-              data: volumeWeightedAveVals,
-            },
-          ]}
-        />
+      <div style={{ display: 'flex', flexDirection: 'row' }}>
+        <div style={{height: "90vh", width: "60vw", display: 'flex'}}>
+          <LineChart
+            xAxis={[{data: xVals, tickInterval: (time) => time.getHours() === 0, scaleType: 'time',}]}
+            series={[
+              {
+                label: 'Close price',
+                data: closePriceVals,
+              },
+              {
+                label: 'Open price',
+                data: openPriceVals,
+              },
+              {
+                label: 'Volume weighted price',
+                data: volumeWeightedAveVals,
+              },
+            ]}
+          />
+        </div>
+        <Paper
+          sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            height: "85vh",
+            width: "50%"
+          }}
+        >
+          <>
+            <Title>{tickerFinData.length !== 0 ? tickerFinData[0]["company_name"] : "-.-"} Financials</Title>
+            <FormControl fullWidth>
+
+              <NativeSelect
+                defaultValue={'Balance Sheet'}
+                value={category}
+                aria-label={''}
+                onChange={handleChangeCategory}
+                // inputProps={{
+                //   name: 'age',
+                //   id: 'uncontrolled-native',
+                // }}
+              >
+                {categories.map(cat => <option value={cat}>{cat}</option>)}
+              </NativeSelect>
+            </FormControl>
+            {financialData}
+          </>
+        </Paper>
       </div>
     </LocalizationProvider>
   );
