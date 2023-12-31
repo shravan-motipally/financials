@@ -144,21 +144,25 @@ const Dashboard = () => {
   }, [financialDataCategories])
 
   const financialData = useMemo(() => {
-    return tickerFinData.map(datum => {
-      const fin = datum["financials"];
-      if (category !== '') {
-        const specifics = Object.keys(fin[snakeCase(category)]);
-        return (
-          <div style={{ fontSize: '2vmin' }}>
-            {specifics.map(datum => (
-            <Typography component="p" variant="body1" sx={{ textAlign: 'left', fontSize: '2vmin' }}>
-              {startCase(datum)}: {fin[snakeCase(category)][datum]["value"]} {fin[snakeCase(category)][datum]["unit"]}
-            </Typography>))}
-          </div>)
-      } else {
-        return <div/>;
-      }
-    })
+    try {
+      return tickerFinData.map(datum => {
+        const fin = datum["financials"];
+        if (category !== '') {
+          const specifics = Object.keys(fin[snakeCase(category)]);
+          return (
+            <div style={{fontSize: '2vmin'}}>
+              {specifics.map(datum => (
+                <Typography component="p" variant="body1" sx={{textAlign: 'left', fontSize: '2vmin'}}>
+                  {startCase(datum)}: {fin[snakeCase(category)][datum]["value"]} {fin[snakeCase(category)][datum]["unit"]}
+                </Typography>))}
+            </div>)
+        } else {
+          return <div/>;
+        }
+      })
+    } catch (e) {
+      return <div/>
+    }
   }, [tickerFinData, category, categories]);
 
   const handleChangeCategory = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
