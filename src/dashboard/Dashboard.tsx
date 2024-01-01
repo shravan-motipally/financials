@@ -21,6 +21,7 @@ import {getAggregateData, getAllTickerData, getFinancials, getTickerData} from "
 import Title from "./Title";
 import Subtitle from "./Subtitle";
 import { startCase, snakeCase } from 'lodash';
+import BrushChart, {StockPrice} from "./BrushChart";
 
 export interface Ticker {
   ticker: string,
@@ -87,6 +88,10 @@ const Dashboard = () => {
   const xVals = useMemo(() => {
     return data.map(datum => new Date(datum.t));
   }, [data]);
+
+  const stockData: StockPrice[] = useMemo(() => {
+    return data.map(datum => { return { date: "" + datum.t, close: datum.c }});
+  }, [data])
 
   const tickerMenuItems = useMemo(() => {
     return tickerData.map(ticker => {
@@ -239,23 +244,24 @@ const Dashboard = () => {
       </Box>
       <div style={{ display: 'flex', flexDirection: 'row' }}>
         <div style={{height: "90vh", width: "60vw", display: 'flex'}}>
-          <LineChart
-            xAxis={[{data: xVals, tickInterval: (time) => time.getHours() === 0, scaleType: 'time',}]}
-            series={[
-              {
-                label: 'Close price',
-                data: closePriceVals,
-              },
-              {
-                label: 'Open price',
-                data: openPriceVals,
-              },
-              {
-                label: 'Volume weighted price',
-                data: volumeWeightedAveVals,
-              },
-            ]}
-          />
+          {/*<LineChart*/}
+          {/*  xAxis={[{data: xVals, tickInterval: (time) => time.getHours() === 0, scaleType: 'time',}]}*/}
+          {/*  series={[*/}
+          {/*    {*/}
+          {/*      label: 'Close price',*/}
+          {/*      data: closePriceVals,*/}
+          {/*    },*/}
+          {/*    {*/}
+          {/*      label: 'Open price',*/}
+          {/*      data: openPriceVals,*/}
+          {/*    },*/}
+          {/*    {*/}
+          {/*      label: 'Volume weighted price',*/}
+          {/*      data: volumeWeightedAveVals,*/}
+          {/*    },*/}
+          {/*  ]}*/}
+          {/*/>*/}
+          <BrushChart stock={stockData} width={window.innerWidth * 0.55} height={window.innerHeight * 0.90}/>
         </div>
         <Paper
           sx={{
