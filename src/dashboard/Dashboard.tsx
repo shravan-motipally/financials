@@ -1,38 +1,42 @@
-import React, {ChangeEvent, useCallback, useEffect, useMemo, useState} from 'react';
-import * as appl from '../data/5min-aggregate-appl.json';
-import * as allTickers from '../data/tickers.json';
-import * as fin from '../data/financialData.json';
-import {LineChart} from '@mui/x-charts/LineChart';
-import {Grid, InputLabel, MenuItem, NativeSelect, Paper, Typography} from "@mui/material";
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import FormControl from '@mui/material/FormControl';
-import Select, {SelectChangeEvent} from '@mui/material/Select';
-import {Timespan} from "../utils/StringConstants";
-import {DatePicker} from "@mui/x-date-pickers";
-import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
-import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
-import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
-import CircularProgress from '@mui/material/CircularProgress';
-import {useDebouncedCallback} from 'use-debounce';
-import {getAggregateData, getAllTickerData, getFinancials, getTickerData} from "../api/polygon-io-api";
+import React, {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { LineChart } from "@mui/x-charts/LineChart";
+import { Grid, MenuItem, NativeSelect, Paper, Typography } from "@mui/material";
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Toolbar from "@mui/material/Toolbar";
+import FormControl from "@mui/material/FormControl";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import { Timespan } from "../utils/StringConstants";
+import { DatePicker } from "@mui/x-date-pickers";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import TextField from "@mui/material/TextField";
+import Autocomplete from "@mui/material/Autocomplete";
+import CircularProgress from "@mui/material/CircularProgress";
+import { useDebouncedCallback } from "use-debounce";
+import {
+  getAggregateData,
+  getAllTickerData,
+  getFinancials,
+} from "../api/polygon-io-api";
 import Title from "./Title";
-import Subtitle from "./Subtitle";
-import { startCase, snakeCase } from 'lodash';
+import { startCase, snakeCase } from "lodash";
 
 export interface Ticker {
-  ticker: string,
-  name: string
+  ticker: string;
+  name: string;
 }
-
 
 const Dashboard = () => {
   const [data, setData] = useState<any[]>([]);
-  const [tickerData, setTickerData] = useState<Ticker[]>([]);
-  const [ticker, setTicker] = React.useState('AAPL');
-  const [timespan, setTimespan] = useState<Timespan>('minute');
+  const [ticker, setTicker] = React.useState("AAPL");
+  const [timespan, setTimespan] = useState<Timespan>("minute");
   const [from, setFrom] = useState<Date>(new Date(2023, 11, 28));
   const [to, setTo] = useState<Date>(new Date(2023, 11, 28));
 
@@ -42,10 +46,6 @@ const Dashboard = () => {
 
   const [tickerFinData, setTickerFinData] = useState<any[]>([]);
   const [category, setCategory] = useState<string>("Balance Sheet");
-
-  const handleChange = (event: SelectChangeEvent) => {
-    setTicker(event.target.value as string);
-  };
 
   const handleTimespanChange = (event: SelectChangeEvent) => {
     setTimespan(event.target.value as Timespan);
@@ -58,66 +58,67 @@ const Dashboard = () => {
         multiplier = 5;
       }
 
-      const aggregateData = await getAggregateData(ticker, multiplier, timespan, from, to);
-      const tickers = await getTickerData(ticker);
-      const finData = await getFinancials(ticker);
-      const options = await getAllTickerData();
+      const aggregateData = (await getAggregateData(
+        ticker,
+        multiplier,
+        timespan,
+        from,
+        to,
+      )) as any;
+      const finData = (await getFinancials(ticker)) as any;
+      const options = (await getAllTickerData()) as any;
       // const aggregateData = appl;
       // const tickers = allTickers;
       // const finData = fin;
-      setData(aggregateData.results);
-      setTickerData(tickers.results);
-      setOptions(options.results);
-      setTickerFinData(finData.results);
+      setData(aggregateData.results || []);
+      setOptions(options.results || []);
+      setTickerFinData(finData.results || []);
     })();
   }, [ticker, timespan, from, to]);
 
   const closePriceVals = useMemo(() => {
-    return data.map(datum => datum.c);
+    return data.map((datum) => datum.c);
   }, [data]);
 
   const openPriceVals = useMemo(() => {
-    return data.map(datum => datum.o);
+    return data.map((datum) => datum.o);
   }, [data]);
 
   const volumeWeightedAveVals = useMemo(() => {
-    return data.map(datum => datum.vw);
+    return data.map((datum) => datum.vw);
   }, [data]);
 
   const xVals = useMemo(() => {
-    return data.map(datum => new Date(datum.t));
+    return data.map((datum) => new Date(datum.t));
   }, [data]);
 
-  const tickerMenuItems = useMemo(() => {
-    return tickerData.map(ticker => {
-      return (<MenuItem value={ticker.ticker}>{ticker.ticker} - {ticker.name}</MenuItem>)
-    })
-  }, [tickerData]);
-
   const timespanMenuItems = useMemo(() => {
-    return ["minute", "day"].map(timespan => {
-      return (<MenuItem value={timespan}>{timespan}</MenuItem>)
-    })
-  }, [tickerData]);
+    return ["minute", "day"].map((timespan) => {
+      return <MenuItem value={timespan}>{timespan}</MenuItem>;
+    });
+  }, []);
 
   const handleFromChange = useCallback((val: Date | null) => {
     if (val !== null) {
       setFrom(val);
     }
-  }, [from])
+  }, []);
 
   const handleToChange = useCallback((val: Date | null) => {
     if (val !== null) {
       setTo(val);
     }
-  }, [to]);
+  }, []);
 
-  const handleAutocompleteChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    const val = event.target.value;
-    if (val !== null) {
-      setTicker(val);
-    }
-  }, [ticker])
+  const handleAutocompleteChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+      const val = event.target.value;
+      if (val !== null) {
+        setTicker(val);
+      }
+    },
+    [],
+  );
 
   const debouncedHandleAutochange = useDebouncedCallback(
     // function
@@ -125,53 +126,63 @@ const Dashboard = () => {
       handleAutocompleteChange(value);
     },
     // delay in ms
-    3000
+    3000,
   );
 
   const financialDataCategories = useMemo(() => {
     const cats: Set<string> = new Set();
-    tickerFinData.forEach(datum => {
+    tickerFinData.forEach((datum) => {
       const fin = datum["financials"];
-      Object.keys(fin).forEach(key => cats.add(startCase(key)));
+      Object.keys(fin).forEach((key) => cats.add(startCase(key)));
     });
     return cats;
   }, [tickerFinData]);
 
   const categories = useMemo(() => {
     const cats: string[] = [];
-    financialDataCategories.forEach(cat => cats.push(cat));
+    financialDataCategories.forEach((cat) => cats.push(cat));
     return cats;
-  }, [financialDataCategories])
+  }, [financialDataCategories]);
 
   const financialData = useMemo(() => {
     try {
-      return tickerFinData.map(datum => {
+      return tickerFinData.map((datum) => {
         const fin = datum["financials"];
-        if (category !== '') {
+        if (category !== "") {
           const specifics = Object.keys(fin[snakeCase(category)]);
           return (
-            <div style={{fontSize: '2vmin'}}>
-              {specifics.map(datum => (
-                <Typography component="p" variant="body1" sx={{textAlign: 'left', fontSize: '2vmin'}}>
-                  {startCase(datum)}: {fin[snakeCase(category)][datum]["value"]} {fin[snakeCase(category)][datum]["unit"]}
-                </Typography>))}
-            </div>)
+            <div style={{ fontSize: "2vmin" }}>
+              {specifics.map((datum) => (
+                <Typography
+                  component="p"
+                  variant="body1"
+                  sx={{ textAlign: "left", fontSize: "2vmin" }}
+                >
+                  {startCase(datum)}: {fin[snakeCase(category)][datum]["value"]}{" "}
+                  {fin[snakeCase(category)][datum]["unit"]}
+                </Typography>
+              ))}
+            </div>
+          );
         } else {
-          return <div/>;
+          return <div />;
         }
-      })
+      });
     } catch (e) {
-      return <div/>
+      return <div />;
     }
-  }, [tickerFinData, category, categories]);
+  }, [tickerFinData, category]);
 
-  const handleChangeCategory = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
-    setCategory(e.target.value);
-  }, [categories]);
+  const handleChangeCategory = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      setCategory(e.target.value);
+    },
+    [],
+  );
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{flexGrow: 1}}>
+      <Box sx={{ flexGrow: 1 }}>
         <AppBar position="static" color={"info"}>
           <Toolbar>
             <Grid container spacing={2}>
@@ -179,7 +190,7 @@ const Dashboard = () => {
                 <FormControl>
                   <Autocomplete
                     id="asynchronous-demo"
-                    sx={{width: 300}}
+                    sx={{ width: 300 }}
                     open={open}
                     onOpen={() => {
                       setOpen(true);
@@ -187,7 +198,10 @@ const Dashboard = () => {
                     onClose={() => {
                       setOpen(false);
                     }}
-                    isOptionEqualToValue={(option, value) => option.ticker === value.ticker || option.name.toLowerCase() === value.name.toLowerCase()}
+                    isOptionEqualToValue={(option, value) =>
+                      option.ticker === value.ticker ||
+                      option.name.toLowerCase() === value.name.toLowerCase()
+                    }
                     getOptionLabel={(option) => option.ticker}
                     options={options}
                     loading={loading}
@@ -200,7 +214,9 @@ const Dashboard = () => {
                           ...params.InputProps,
                           endAdornment: (
                             <React.Fragment>
-                              {loading ? <CircularProgress color="inherit" size={20}/> : null}
+                              {loading ? (
+                                <CircularProgress color="inherit" size={20} />
+                              ) : null}
                               {params.InputProps.endAdornment}
                             </React.Fragment>
                           ),
@@ -225,33 +241,39 @@ const Dashboard = () => {
               </Grid>
               <Grid item>
                 <FormControl>
-                  <DatePicker value={from} onChange={handleFromChange}/>
+                  <DatePicker value={from} onChange={handleFromChange} />
                 </FormControl>
               </Grid>
               <Grid item>
                 <FormControl>
-                  <DatePicker value={to} onChange={handleToChange}/>
+                  <DatePicker value={to} onChange={handleToChange} />
                 </FormControl>
               </Grid>
             </Grid>
           </Toolbar>
         </AppBar>
       </Box>
-      <div style={{ display: 'flex', flexDirection: 'row' }}>
-        <div style={{height: "90vh", width: "60vw", display: 'flex'}}>
+      <div style={{ display: "flex", flexDirection: "row" }}>
+        <div style={{ height: "90vh", width: "60vw", display: "flex" }}>
           <LineChart
-            xAxis={[{data: xVals, tickInterval: (time) => time.getHours() === 0, scaleType: 'time',}]}
+            xAxis={[
+              {
+                data: xVals,
+                tickInterval: (time) => time.getHours() === 0,
+                scaleType: "time",
+              },
+            ]}
             series={[
               {
-                label: 'Close price',
+                label: "Close price",
                 data: closePriceVals,
               },
               {
-                label: 'Open price',
+                label: "Open price",
                 data: openPriceVals,
               },
               {
-                label: 'Volume weighted price',
+                label: "Volume weighted price",
                 data: volumeWeightedAveVals,
               },
             ]}
@@ -260,27 +282,33 @@ const Dashboard = () => {
         <Paper
           sx={{
             p: 2,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             height: "85vh",
-            width: "50%"
+            width: "50%",
           }}
         >
           <>
-            <Title>{tickerFinData.length !== 0 ? tickerFinData[0]["company_name"] : "-.-"} Financials</Title>
+            <Title>
+              {tickerFinData.length !== 0
+                ? tickerFinData[0]["company_name"]
+                : "-.-"}{" "}
+              Financials
+            </Title>
             <FormControl fullWidth>
-
               <NativeSelect
-                defaultValue={'Balance Sheet'}
+                defaultValue={"Balance Sheet"}
                 value={category}
-                aria-label={''}
+                aria-label={""}
                 onChange={handleChangeCategory}
                 // inputProps={{
                 //   name: 'age',
                 //   id: 'uncontrolled-native',
                 // }}
               >
-                {categories.map(cat => <option value={cat}>{cat}</option>)}
+                {categories.map((cat) => (
+                  <option value={cat}>{cat}</option>
+                ))}
               </NativeSelect>
             </FormControl>
             {financialData}
@@ -289,6 +317,6 @@ const Dashboard = () => {
       </div>
     </LocalizationProvider>
   );
-}
+};
 
 export default Dashboard;

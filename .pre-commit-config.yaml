@@ -1,0 +1,95 @@
+# Pre-commit configuration for preventing secrets and maintaining code quality
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # Gitleaks - Secret detection
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # General hooks for common issues
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Check YAML files are valid
+      - id: check-yaml
+
+      # Check JSON files are valid
+      - id: check-json
+
+      # Check that files end with a newline
+      - id: end-of-file-fixer
+        exclude: '\.min\.(js|css)$'
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        exclude: '\.min\.(js|css)$'
+
+      # Prevent committing to main/master
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+
+      # Check for private keys
+      - id: detect-private-key
+
+      # Check for AWS credentials
+      - id: detect-aws-credentials
+
+  # Node.js-based secret scanning
+  - repo: local
+    hooks:
+      - id: secret-scan
+        name: Node.js Secret Scanner
+        entry: npm run secret-scan
+        language: system
+        files: \.(js|jsx|ts|tsx|json|md|yml|yaml|env)$
+        exclude: package-lock.json
+
+  # ESLint for TypeScript/JavaScript
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npm run lint:check
+        language: system
+        files: \.(js|jsx|ts|tsx)$
+        exclude: node_modules/
+
+  # Prettier for code formatting
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: npm run format:check
+        language: system
+        files: \.(js|jsx|ts|tsx|json|md|yml|yaml)$
+        exclude: package-lock.json
+
+  # TypeScript compilation check
+  - repo: local
+    hooks:
+      - id: typescript
+        name: TypeScript Check
+        entry: npm run type-check
+        language: system
+        files: \.(ts|tsx)$
+        exclude: node_modules/
+
+# Configuration for the pre-commit framework
+default_language_version:
+  node: "18.17.0"
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: "3.0.0"

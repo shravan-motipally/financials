@@ -1,0 +1,30 @@
+# Validate commit message format
+# This ensures commit messages follow conventional commit format
+# and prevents commits with potentially sensitive information in the message
+
+commit_regex='^(feat|fix|docs|style|refactor|test|chore|perf|build|ci|revert)(\(.+\))?: .{1,50}'
+
+if ! grep -qE "$commit_regex" "$1"; then
+  echo "❌ Invalid commit message format!"
+  echo "📝 Commit message should follow conventional commits format:"
+  echo "   type(scope): description"
+  echo ""
+  echo "📋 Valid types: feat, fix, docs, style, refactor, test, chore, perf, build, ci, revert"
+  echo "📏 Description should be 1-50 characters"
+  echo ""
+  echo "✅ Examples:"
+  echo "   feat(search): add live API search functionality"
+  echo "   fix(api): resolve authentication issue"
+  echo "   docs: update README with setup instructions"
+  exit 1
+fi
+
+# Check for potentially sensitive information in commit message
+if grep -iE "(password|secret|key|token|api.?key)" "$1"; then
+  echo "⚠️  WARNING: Commit message may contain sensitive information!"
+  echo "🔍 Found potential secrets in commit message."
+  echo "📝 Please remove any sensitive data from the commit message."
+  exit 1
+fi
+
+echo "✅ Commit message validation passed!"

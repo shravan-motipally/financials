@@ -1,0 +1,97 @@
+# Gitleaks configuration file
+# See https://github.com/gitleaks/gitleaks for configuration options
+
+title = "Gitleaks Configuration for Financials Project"
+
+# Extend default config with custom rules
+[extend]
+  # Use the default gitleaks configuration as base
+  useDefault = true
+
+# Custom rules for this project
+[[rules]]
+  id = "polygon-api-key"
+  description = "Polygon.io API Key"
+  regex = '''(?i)polygon.*[=:]\s*['"]*[a-zA-Z0-9_]{32,}['"]*'''
+  keywords = ["polygon", "polygonio", "api", "key", "token"]
+
+[[rules]]
+  id = "react-app-env-var"
+  description = "React App Environment Variable with sensitive data"
+  regex = '''REACT_APP_[A-Z_]*(?:KEY|TOKEN|SECRET|PASSWORD|API)[A-Z_]*\s*=\s*['"]*[a-zA-Z0-9_/+=]{10,}['"]*'''
+  keywords = ["REACT_APP_", "KEY", "TOKEN", "SECRET", "API"]
+
+[[rules]]
+  id = "financial-api-endpoints"
+  description = "Financial API endpoints with keys"
+  regex = '''https?://[^/]*(?:polygon|alpha|quandl|yahoo|bloomberg)\.(?:io|com|net)/.*[?&](?:api|key|token)=[a-zA-Z0-9_]{8,}'''
+  keywords = ["polygon.io", "alphavantage", "apikey", "token"]
+
+# Allowlist certain files and patterns
+[allowlist]
+  description = "Allowlist certain patterns that are safe"
+  
+  # Allow example/dummy keys in documentation
+  regexes = [
+    '''YOUR_API_KEY''',
+    '''API_KEY_HERE''',
+    '''example\.com''',
+    '''localhost''',
+    '''127\.0\.0\.1''',
+    '''cursor=.*''',
+    '''tickers\?cursor=''',
+  ]
+  
+  # Allow certain files
+  paths = [
+    ".gitleaks.toml",
+    "README.md",
+    "POLYGON_API_SETUP.md",
+    "package.json",
+    "package-lock.json",
+  ]
+  
+  # Allow certain commits (if needed)
+  commits = []
+
+# Custom entropy settings
+[entropy]
+  # Enable entropy scanning
+  enabled = true
+  
+  # Minimum entropy threshold (0.0 - 8.0)
+  threshold = 3.5
+  
+  # Groups to scan for high entropy strings
+  groups = [
+    "api",
+    "key", 
+    "token",
+    "secret",
+    "password",
+    "credential"
+  ]
+
+# File type specific settings
+[fileType]
+  # Skip these file types
+  skip = [
+    ".git",
+    ".vscode",
+    "node_modules",
+    ".env.example",
+    ".env.template",
+    "*.min.js",
+    "*.min.css",
+    "*.map",
+    "*.ico",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.svg",
+    "*.pdf",
+    "*.zip",
+    "*.tar.gz",
+    "*.lock"
+  ]

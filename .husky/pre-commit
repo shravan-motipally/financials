@@ -1,0 +1,5 @@
+# Run lint-staged for code quality (ESLint and Prettier)
+npx lint-staged
+
+# Run gitleaks for secret detection on staged files
+npm run secret-scan:staged
