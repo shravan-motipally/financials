@@ -27,6 +27,9 @@ import {
   Article,
   OpenInNew,
   Group,
+  TrendingUp,
+  TrendingDown,
+  TrendingFlat,
 } from "@mui/icons-material";
 import {
   getTickerDetails,
@@ -37,17 +40,20 @@ import {
   RelatedCompaniesResponse,
   PolygonApiError,
 } from "../api/polygon-io-api";
+import { computeSignal, SignalResult } from "../utils/signalEngine";
 
 interface LoadingState {
   details: boolean;
   news: boolean;
   related: boolean;
+  signal: boolean;
 }
 
 interface ErrorState {
   details: string | null;
   news: string | null;
   related: string | null;
+  signal: string | null;
 }
 
 const TickerDetail: React.FC = () => {
@@ -60,12 +66,14 @@ const TickerDetail: React.FC = () => {
   const [newsData, setNewsData] = useState<NewsResponse | null>(null);
   const [relatedCompanies, setRelatedCompanies] =
     useState<RelatedCompaniesResponse | null>(null);
+  const [signalResult, setSignalResult] = useState<SignalResult | null>(null);
 
   // Loading states
   const [loading, setLoading] = useState<LoadingState>({
     details: true,
     news: true,
     related: true,
+    signal: true,
   });
 
   // Error states
@@ -73,6 +81,7 @@ const TickerDetail: React.FC = () => {
     details: null,
     news: null,
     related: null,
+    signal: null,
   });
 
   const handleBackClick = () => {
@@ -96,8 +105,9 @@ const TickerDetail: React.FC = () => {
     setTickerDetails(null);
     setNewsData(null);
     setRelatedCompanies(null);
-    setLoading({ details: true, news: true, related: true });
-    setErrors({ details: null, news: null, related: null });
+    setSignalResult(null);
+    setLoading({ details: true, news: true, related: true, signal: true });
+    setErrors({ details: null, news: null, related: null, signal: null });
 
     // Scroll to top when navigating to a new ticker
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -164,6 +174,25 @@ const TickerDetail: React.FC = () => {
       }
     };
 
+    const fetchSignal = async () => {
+      try {
+        setLoading((prev) => ({ ...prev, signal: true }));
+        setErrors((prev) => ({ ...prev, signal: null }));
+
+        const result = await computeSignal(symbol);
+        setSignalResult(result);
+      } catch (error) {
+        const message =
+          error instanceof PolygonApiError
+            ? error.message
+            : "Failed to compute signal";
+        setErrors((prev) => ({ ...prev, signal: message }));
+        console.error("Failed to compute signal:", error);
+      } finally {
+        setLoading((prev) => ({ ...prev, signal: false }));
+      }
+    };
+
     // Fetch all data with some delay to avoid rate limiting
     fetchTickerDetails();
 
@@ -175,6 +204,10 @@ const TickerDetail: React.FC = () => {
     setTimeout(() => {
       fetchRelatedCompanies();
     }, 400);
+
+    setTimeout(() => {
+      fetchSignal();
+    }, 600);
   }, [symbol]);
 
   const formatMarketCap = (value: number | undefined): string => {
@@ -475,6 +508,97 @@ const TickerDetail: React.FC = () => {
 
         {/* Sidebar */}
         <Grid item xs={12} md={4}>
+          {/* Signal (heuristic, not investment advice) */}
+          <Card elevation={3} sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                {signalResult?.label === "BUY" ? (
+                  <TrendingUp color="success" />
+                ) : signalResult?.label === "SELL" ? (
+                  <TrendingDown color="error" />
+                ) : (
+                  <TrendingFlat color="disabled" />
+                )}
+                Signal
+              </Typography>
+
+              {loading.signal ? (
+                <Box>
+                  <Skeleton variant="rectangular" width="100%" height={40} />
+                  <Skeleton
+                    variant="text"
+                    width="90%"
+                    height={20}
+                    sx={{ mt: 1 }}
+                  />
+                  <Skeleton variant="text" width="70%" height={20} />
+                </Box>
+              ) : errors.signal ? (
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    Could not compute a signal: {errors.signal}
+                  </Typography>
+                </Alert>
+              ) : signalResult?.insufficientData ? (
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    {signalResult.context[0] ??
+                      "Not enough price history to compute a signal."}
+                  </Typography>
+                </Alert>
+              ) : signalResult ? (
+                <Box>
+                  <Chip
+                    label={`${signalResult.label} (${signalResult.score > 0 ? "+" : ""}${signalResult.score}/${signalResult.maxScore})`}
+                    color={
+                      signalResult.label === "BUY"
+                        ? "success"
+                        : signalResult.label === "SELL"
+                          ? "error"
+                          : "default"
+                    }
+                    sx={{ fontWeight: "bold", mb: 1.5 }}
+                  />
+
+                  <List dense disablePadding>
+                    {signalResult.votes.map((v) => (
+                      <ListItem key={v.name} sx={{ px: 0, py: 0.5 }}>
+                        <ListItemText
+                          primary={v.name}
+                          secondary={v.detail}
+                          primaryTypographyProps={{ variant: "body2" }}
+                          secondaryTypographyProps={{ variant: "caption" }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+
+                  {signalResult.context.map((c) => (
+                    <Typography
+                      key={c}
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {c}
+                    </Typography>
+                  ))}
+
+                  <Divider sx={{ my: 1.5 }} />
+                  <Typography variant="caption" color="text.secondary">
+                    Rule-based heuristic over free end-of-day price data only
+                    (moving averages, RSI). Not investment advice.
+                  </Typography>
+                </Box>
+              ) : null}
+            </CardContent>
+          </Card>
+
           {/* Related Companies */}
           <Card elevation={3}>
             <CardContent>
